@@ -10,13 +10,14 @@
 #import "cocos2d.h"
 #import "CCTexture_Private.h"
 #import "CCSprite_Private.h"
+#import "Attractor.h"
 
 static const int MAX_SEGMENTS = 20;
-static const float PHYSICS_BODY_RADIUS = 5;
-static const float INNER_STIFFNESS = 10;//1500;
-static const float INNER_DAMPING = 5;//50;
-static const float OUTER_STIFFNESS = 20;//1000;
-static const float OUTER_DAMPING = 5;//50;
+static const float PHYSICS_BODY_RADIUS = 1;
+static const float INNER_STIFFNESS = 50;//1500;
+static const float INNER_DAMPING = 20;
+static const float OUTER_STIFFNESS = 50;//1000;
+static const float OUTER_DAMPING = 20;//50;
 
 
 @implementation SoftBubble {
@@ -41,7 +42,7 @@ static const float OUTER_DAMPING = 5;//50;
     bubbleRadius = self.contentSize.width/2;
     
     // Main body at the center of the bubble
-    self.physicsBody = [CCPhysicsBody bodyWithCircleOfRadius:1
+    self.physicsBody = [CCPhysicsBody bodyWithCircleOfRadius:PHYSICS_BODY_RADIUS
                                                    andCenter:CGPointMake(bubbleRadius, bubbleRadius)];
     self.physicsBody.allowsRotation = false;
     self.physicsBody.collisionMask= @[];
@@ -171,16 +172,45 @@ MakeVertex(ccVertex2F v, ccTex2F texCoord, ccColor4F color, GLKMatrix4 transform
     }
 }
 
+-(void) applyForceFromAttractor:(id<Attractor>) attractor {
+    // move children with an attracting/repelling force
+    for (CCNode* n in self.children) {
+        [n position];
+        [n positionInPoints];
+        
+        CGPoint dist= ccpSub(n.position, [attractor position]);
+        float len=ccpLength(dist);
+        if (len<=0)
+            continue;
+        CGFloat scale= 10*fmaxf(0, 20-len);
+        dist= ccpMult(dist, scale/len);
+        [n.physicsBody applyForce:dist];
+    }
+}
+
 // offset center mass and all external masses
 -(void) setPosition: (CGPoint)newPosition
 {
-//    CGPoint delta= ccpSub(newPosition, self.position);
-//    for (CCNode* n in self.children) {
-//        n.position= ccpAdd(n.position, delta);
-//    }
+    CGPoint delta= ccpSub(newPosition, self.position);
+    for (CCNode* n in self.children) {
+        n.position= ccpAdd(n.position, delta);
+    }
     // now move center
     [super setPosition:newPosition];
 }
 
+- (void)applyDamping:(CCTime)delta {
+    //linear damping
+    const float FRAME_DURATION= 1/60.0f;
+    const float scaledDamping= 1.0f - 0.01f* (delta/FRAME_DURATION);
+    self.physicsBody.velocity= ccpMult(self.physicsBody.velocity, scaledDamping);
+    for (CCNode* n in self.children) {
+        n.physicsBody.velocity= ccpMult(n.physicsBody.velocity, scaledDamping);
+    }
+}
+
+- (void)update:(CCTime)delta {
+    [self applyDamping:delta];
+}
 
 @end

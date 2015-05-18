@@ -1,10 +1,13 @@
 #import "MainScene.h"
 #import "SoftBubble.h"
+#import "Food.h"
+
 @implementation MainScene {
     CCPhysicsNode* _physicsRoot;
     CCNode* _scroller;
     CCNode* _world;
     SoftBubble* _bubble;
+    Food* _food;
 }
 
 // Similar to viewDidLoad:
@@ -13,19 +16,21 @@
     _physicsRoot.debugDraw= YES;
     _physicsRoot.collisionDelegate= self;
     
-    _bubble= [[SoftBubble alloc] initWithImageNamed:@"BubbleGum.png"];
-    [_physicsRoot addChild:_bubble];
-    
-    // place 50% in parent
-    _bubble.position= [_bubble convertPositionToPoints:ccp(0.5,0.5)
-                                                  type:CCPositionTypeNormalized];
-    _bubble.contentSize= (CGSize){ _bubble.contentSize.width/2, _bubble.contentSize.height/2 };
+    // Propagate scale to content size
+    _bubble.contentSize= (CGSize){ _bubble.contentSize.width*_bubble.scale,
+        _bubble.contentSize.height*_bubble.scale };
+    _bubble.scale=1;
     [_bubble enablePhysics];
     
     // camera should follow player
     CCActionFollow* followMe= [CCActionFollow actionWithTarget:_bubble
                                                  worldBoundary:_world.boundingBox];
     [_scroller runAction:followMe];
+}
+
+-(void)update:(CCTime)delta
+{
+    [_bubble applyForceFromAttractor:_food];
 }
 
 -(void) onRight {

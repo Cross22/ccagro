@@ -7,9 +7,11 @@
 //
 
 #import "CCSprite.h"
+@protocol Attractor;
 
 @interface SoftBubble : CCSprite
 - (void)enablePhysics;
 - (void) applyForce:(CGPoint)force;
+- (void) applyForceFromAttractor:(id<Attractor>) attractor;
 - (void) setPosition:(CGPoint)position;
 @end
